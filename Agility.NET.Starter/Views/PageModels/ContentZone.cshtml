@@ -1,0 +1,15 @@
+@model ContentZoneRenderer;
+@using Agility.NET.FetchAPI.Models;
+
+@foreach (var model in Model.ContentZone.Modules)
+{
+	var moduleModel = new ModuleModel()
+				{
+					Locale = Model.PageModel.Locale,
+					Module = model?.Item?.Fields?.ToString() ?? "",
+					Model = model,
+					SitemapPage = Model.PageModel.SitemapPage
+				};
+
+	Write(await Component.InvokeAsync(model.Module, moduleModel));
+}

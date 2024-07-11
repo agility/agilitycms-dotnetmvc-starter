@@ -14,180 +14,195 @@ using Microsoft.Extensions.Hosting;
 
 namespace Agility.NET.Starter.Util.Helpers
 {
-    public static class TransformerMiddlewareHelpers
-    {
-        public static async Task<List<SitemapPage>> GetSitemapPages(AppSettings appSettings, FetchApiService fetchApiService, bool isPreview)
-        {
-            var sitemapPages = new List<SitemapPage>();
-            var locales = appSettings.Locales.Split(",");
+	public static class TransformerMiddlewareHelpers
+	{
+		public static async Task<Dictionary<string, SitemapPage>> GetSitemapPages(AppSettings appSettings, FetchApiService fetchApiService, bool isPreview)
+		{
+			var sitemapPages = new Dictionary<string, SitemapPage>();
+			var locales = appSettings.Locales.Split(",");
 
-            foreach (var locale in locales)
-            {
+			foreach (var locale in locales)
+			{
 
-                var result = await fetchApiService.GetSitemapFlat(new GetSitemapParameters()
-                {
-                    Locale = locale,
-                    ChannelName = appSettings.ChannelName,
-                    IsPreview = isPreview
-                });
-                var deserializedResult = DynamicHelpers.DeserializeSitemapFlat(result);
+				var result = await fetchApiService.GetSitemapFlat(new GetSitemapParameters()
+				{
+					Locale = locale,
+					ChannelName = appSettings.ChannelName,
+					IsPreview = isPreview
+				});
+				var deserializedResult = DynamicHelpers.DeserializeSitemapFlat(result);
 
-                deserializedResult.ForEach(s => s.Locale = locale);
+				int index = 0;
+				deserializedResult.ForEach(p =>
+				{
+					p.Locale = locale;
 
-                sitemapPages.AddRange(deserializedResult);
-            }
-
-            return sitemapPages;
-        }
-
-        public static async Task<UrlRedirectionsResponse> GetUrlRedirects(FetchApiService fetchApiService)
-        {
-
-            var result = await fetchApiService.GetUrlRedirections(new GetUrlRedirectionsParameters()
-            {
-                LastAccessDate = DateTime.Now
-            });
-            return DynamicHelpers.DeserializeTo<UrlRedirectionsResponse>(result);
-        }
-
-        public static SitemapPage CheckLocaleWithDifferentPageName(string path, List<SitemapPage> sitemapPages)
-        {
-            if (string.IsNullOrEmpty(path)) return null;
-
-            var checkPath = path;
-
-            var index = checkPath?.IndexOf("/", StringComparison.Ordinal);
-
-            if (index < 0) return null;
-
-            var locale = checkPath?.Substring(0, index.Value);
-
-            if (string.IsNullOrEmpty(locale)) return null;
-
-            var pageWithoutLocale = checkPath?.Replace(locale, string.Empty);
-            var page = sitemapPages.FirstOrDefault(p => p.Path == pageWithoutLocale);
-
-            var pageInDifferentLocaleAndName =
-                sitemapPages.FirstOrDefault(s => s.PageID == page?.PageID && s.Locale == locale);
-
-            return pageInDifferentLocaleAndName;
-        }
-
-        public static async Task<List<SitemapPage>> GetOrCacheSitemapPages(
-            IWebHostEnvironment env,
-            AppSettings appSettings,
-            FetchApiService fetchApiService,
-            IHttpContextAccessor httpContextAccessor,
-            IMemoryCache cache)
-        {
-            SetAgilityPreviewKeyIfValid(httpContextAccessor, appSettings);
-
-            bool isPreview = PreviewHelpers.IsPreviewMode(httpContextAccessor);
-
-            if (env.IsDevelopment())
-            {
-                //force preview mode in development
-                PreviewHelpers.SetPreviewMode(httpContextAccessor, true);
-                isPreview = true;
-
-            }
+					//homepage is ALWAYS "/", so we need to make sure we actually add it both at "/" and it's regular path...
+					if (index == 0)
+					{
+						sitemapPages["/"] = p;
+					}
 
 
-            if (isPreview)
-            {
-                return await GetSitemapPages(appSettings, fetchApiService, isPreview: true);
-            }
+					sitemapPages[p.Path] = p;
 
-            var key = Constants.SitemapPagesKey;
+					++index;
+				});
 
-            if (cache.TryGetValue(key, out List<SitemapPage> cachedSitemapPages)) return cachedSitemapPages;
+			}
+			return sitemapPages;
+		}
 
-            var sitemapPages = await GetSitemapPages(appSettings, fetchApiService, isPreview: false);
+		public static async Task<UrlRedirectionsResponse> GetUrlRedirects(FetchApiService fetchApiService)
+		{
 
-            var cacheExpirationOptions = new MemoryCacheEntryOptions
-            {
-                AbsoluteExpiration = DateTime.Now.AddMinutes(appSettings.CacheInMinutes),
-                Priority = CacheItemPriority.Normal
-            };
+			var result = await fetchApiService.GetUrlRedirections(new GetUrlRedirectionsParameters()
+			{
+				LastAccessDate = DateTime.Now
+			});
+			return DynamicHelpers.DeserializeTo<UrlRedirectionsResponse>(result);
+		}
 
-            cache.Set(key, sitemapPages, cacheExpirationOptions);
-            return sitemapPages;
-        }
+		public static SitemapPage CheckLocaleWithDifferentPageName(string path, Dictionary<string, SitemapPage> sitemapPages)
+		{
+			if (string.IsNullOrEmpty(path)) return null;
 
-        public static async Task<UrlRedirectionsResponse> GetOrCacheUrlRedirects(
-            IWebHostEnvironment env,
-            AppSettings appSettings,
-            FetchApiService fetchApiService,
-            IHttpContextAccessor httpContextAccessor,
-            IMemoryCache cache)
-        {
+			var checkPath = path;
 
-            SetAgilityPreviewKeyIfValid(httpContextAccessor, appSettings);
+			var index = checkPath?.IndexOf("/", StringComparison.Ordinal);
 
-            if (env.IsDevelopment())
-            {
-                return await GetUrlRedirects(fetchApiService);
-            }
+			if (index < 0) return null;
 
-            bool isPreview = PreviewHelpers.IsPreviewMode(httpContextAccessor);
+			var locale = checkPath?.Substring(0, index.Value);
 
-            if (isPreview)
-            {
-                return await GetUrlRedirects(fetchApiService);
-            }
+			if (string.IsNullOrEmpty(locale)) return null;
 
-            var key = Constants.UrlRedirectionsResponseKey;
+			var pageWithoutLocale = checkPath?.Replace(locale, string.Empty);
+			SitemapPage page;
+			sitemapPages.TryGetValue(pageWithoutLocale, out page);
 
-            if (cache.TryGetValue(key, out UrlRedirectionsResponse cachedUrlRedirectionsResponse)) return cachedUrlRedirectionsResponse;
 
-            var urlRedirectionsResponse = await GetUrlRedirects(fetchApiService);
+			var pageInDifferentLocaleAndName =
+				sitemapPages.Values.FirstOrDefault(s => s.PageID == page?.PageID && s.Locale == locale);
 
-            var cacheExpirationOptions = new MemoryCacheEntryOptions
-            {
-                AbsoluteExpiration = DateTime.Now.AddMinutes(appSettings.CacheInMinutes),
-                Priority = CacheItemPriority.Normal
-            };
+			return pageInDifferentLocaleAndName;
+		}
 
-            cache.Set(key, urlRedirectionsResponse, cacheExpirationOptions);
-            return urlRedirectionsResponse;
-        }
+		public static async Task<Dictionary<string, SitemapPage>> GetOrCacheSitemapPages(
+			IWebHostEnvironment env,
+			AppSettings appSettings,
+			FetchApiService fetchApiService,
+			IHttpContextAccessor httpContextAccessor,
+			IMemoryCache cache)
+		{
+			SetAgilityPreviewKeyIfValid(httpContextAccessor, appSettings);
 
-        public static void SetAgilityPreviewKeyIfValid(
-            IHttpContextAccessor httpContextAccessor,
-            AppSettings appSettings
-            )
-        {
-            var agilityPreviewKey = httpContextAccessor.HttpContext?.Request.Query[Constants.AgilityPreviewKeyName]
-                .ToString();
+			bool isPreview = PreviewHelpers.IsPreviewMode(httpContextAccessor);
 
-            if (!string.IsNullOrEmpty(agilityPreviewKey)
-                && agilityPreviewKey == Agility.NET.FetchAPI.Helpers.PreviewHelpers.GenerateAgilityPreviewKey(appSettings.SecurityKey))
-            {
-                //we are kicking into preview mode
-                // Set the preview cookie
-                PreviewHelpers.SetPreviewCookie(httpContextAccessor);
+			if (env.IsDevelopment())
+			{
+				//force preview mode in development
+				PreviewHelpers.SetPreviewMode(httpContextAccessor, true);
+				isPreview = true;
 
-                // Set the IsPreview flag in the HttpContext
-                PreviewHelpers.SetPreviewMode(httpContextAccessor, true);
-            }
-            else if (PreviewHelpers.CheckPreviewCookie(httpContextAccessor))
-            {
-                //if the preview cookie is already set, we are in preview mode
-                // Set the IsPreview flag in the HttpContext
-                PreviewHelpers.SetPreviewMode(httpContextAccessor, true);
-            }
-        }
+			}
 
-        public static bool DoesAgilityPageExist(SitemapPage sitemapPage, string path)
-        {
-            if (sitemapPage.IsFolder)
-                return false;
 
-            if (sitemapPage.Path == $@"/{path}")
-                return true;
+			if (isPreview)
+			{
+				return await GetSitemapPages(appSettings, fetchApiService, isPreview: true);
+			}
 
-            return $@"/{sitemapPage.Locale}{sitemapPage.Path}" == $"/{path}";
-        }
+			var key = Constants.SitemapPagesKey;
 
-    }
+			if (cache.TryGetValue(key, out Dictionary<string, SitemapPage> cachedSitemapPages)) return cachedSitemapPages;
+
+			var sitemapPages = await GetSitemapPages(appSettings, fetchApiService, isPreview: false);
+
+			var cacheExpirationOptions = new MemoryCacheEntryOptions
+			{
+				AbsoluteExpiration = DateTime.Now.AddMinutes(appSettings.CacheInMinutes),
+				Priority = CacheItemPriority.Normal
+			};
+
+			cache.Set(key, sitemapPages, cacheExpirationOptions);
+			return sitemapPages;
+		}
+
+		public static async Task<UrlRedirectionsResponse> GetOrCacheUrlRedirects(
+			IWebHostEnvironment env,
+			AppSettings appSettings,
+			FetchApiService fetchApiService,
+			IHttpContextAccessor httpContextAccessor,
+			IMemoryCache cache)
+		{
+
+			SetAgilityPreviewKeyIfValid(httpContextAccessor, appSettings);
+
+			if (env.IsDevelopment())
+			{
+				return await GetUrlRedirects(fetchApiService);
+			}
+
+			bool isPreview = PreviewHelpers.IsPreviewMode(httpContextAccessor);
+
+			if (isPreview)
+			{
+				return await GetUrlRedirects(fetchApiService);
+			}
+
+			var key = Constants.UrlRedirectionsResponseKey;
+
+			if (cache.TryGetValue(key, out UrlRedirectionsResponse cachedUrlRedirectionsResponse)) return cachedUrlRedirectionsResponse;
+
+			var urlRedirectionsResponse = await GetUrlRedirects(fetchApiService);
+
+			var cacheExpirationOptions = new MemoryCacheEntryOptions
+			{
+				AbsoluteExpiration = DateTime.Now.AddMinutes(appSettings.CacheInMinutes),
+				Priority = CacheItemPriority.Normal
+			};
+
+			cache.Set(key, urlRedirectionsResponse, cacheExpirationOptions);
+			return urlRedirectionsResponse;
+		}
+
+		public static void SetAgilityPreviewKeyIfValid(
+			IHttpContextAccessor httpContextAccessor,
+			AppSettings appSettings
+			)
+		{
+			var agilityPreviewKey = httpContextAccessor.HttpContext?.Request.Query[Constants.AgilityPreviewKeyName]
+				.ToString();
+
+			if (!string.IsNullOrEmpty(agilityPreviewKey)
+				&& agilityPreviewKey == Agility.NET.FetchAPI.Helpers.PreviewHelpers.GenerateAgilityPreviewKey(appSettings.SecurityKey))
+			{
+				//we are kicking into preview mode
+				// Set the preview cookie
+				PreviewHelpers.SetPreviewCookie(httpContextAccessor);
+
+				// Set the IsPreview flag in the HttpContext
+				PreviewHelpers.SetPreviewMode(httpContextAccessor, true);
+			}
+			else if (PreviewHelpers.CheckPreviewCookie(httpContextAccessor))
+			{
+				//if the preview cookie is already set, we are in preview mode
+				// Set the IsPreview flag in the HttpContext
+				PreviewHelpers.SetPreviewMode(httpContextAccessor, true);
+			}
+		}
+
+		public static bool DoesAgilityPageExist(SitemapPage sitemapPage, string path)
+		{
+			if (sitemapPage.IsFolder)
+				return false;
+
+			if (sitemapPage.Path == $@"/{path}")
+				return true;
+
+			return $@"/{sitemapPage.Locale}{sitemapPage.Path}" == $"/{path}";
+		}
+
+	}
 }

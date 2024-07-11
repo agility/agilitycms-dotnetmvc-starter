@@ -5,8 +5,7 @@ VisualStudioVersion = 17.4.33213.308
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Agility.NET.Starter", "Agility.NET.Starter.csproj", "{EB1C1C78-8347-48DC-A397-2C35F9B6C124}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Agility.NET.AgilityCLI", "..\Agility.NET.AgilityCLI\Agility.NET.AgilityCLI.csproj", "{61D64E00-6A50-4196-B98F-21EC7B4E83B2}"
-EndProject
+
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

@@ -62,11 +62,10 @@ namespace Agility.NET.Starter.Util.Middleware
 			await _next(context);
 		}
 
-		private static bool CheckIfDifferentPageNameInLocale(HttpContext context, List<SitemapPage> sitemapPages, string path)
+		private static bool CheckIfDifferentPageNameInLocale(HttpContext context, Dictionary<string, SitemapPage> sitemapPages, string path)
 		{
-			var agilityPage =
-				 sitemapPages
-					  .Find(s => TransformerMiddlewareHelpers.DoesAgilityPageExist(s, path));
+			SitemapPage agilityPage;
+			sitemapPages.TryGetValue(path, out agilityPage);
 
 			if (agilityPage != null) return false;
 

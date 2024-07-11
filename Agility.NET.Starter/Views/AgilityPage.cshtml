@@ -1,0 +1,39 @@
+﻿@using Agility.NET.FetchAPI.Models
+@using Agility.NET.Starter.Util.Helpers
+@using Agility.Models
+
+@model Agility.Models.AgilityPageModel
+
+@{
+
+	DefineSection("SEO", async () =>
+	{
+		Write(await Component.InvokeAsync("SEO", Model));
+	});
+}
+
+
+@{
+	Layout = "~/Views/_Layout.cshtml";
+}
+
+
+@if (!string.IsNullOrEmpty(Model.PageResponse.Scripts.Top))
+{
+	@Html.Raw($"<script>{Model.PageResponse.Scripts.Top}</script>")
+}
+
+@await Component.InvokeAsync("PreviewBar")
+<div class="flex flex-col min-h-screen">
+	@await Component.InvokeAsync("SiteHeader", Model.Locale)
+	<main class="flex-grow">
+		@await Component.InvokeAsync("RenderPageModel", Model)
+	</main>
+	@await Component.InvokeAsync("SiteFooter")
+</div>
+
+
+@if (!string.IsNullOrEmpty(Model.PageResponse.Scripts.Bottom))
+{
+	@Html.Raw($"<script>{Model.PageResponse.Scripts.Bottom}</script>")
+}
