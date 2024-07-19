@@ -45,6 +45,7 @@ namespace Agility.NET.Starter.ViewComponents.PageComponents
 				isPreview: Util.Helpers.PreviewHelpers.IsPreviewMode(HttpContext));
 
 			// This is an alternative way to get the posts, using the GetTypedContentList method
+
 			/*
 			var posts = await _fetchApiService.GetTypedContentList<Post>(new GetListParameters
 			{

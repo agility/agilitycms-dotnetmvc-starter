@@ -14,8 +14,17 @@ namespace Agility.NET.Starter.Util.Helpers
 			return httpContext.Items["IsPreview"] != null && (bool)httpContext.Items["IsPreview"];
 		}
 
+		public static bool IsDevelopmentMode(HttpContext httpContext)
+		{
+			if (httpContext == null) return false;
+			return httpContext.Request.Host.Host == "localhost";
+		}
+
 		public static bool IsPreviewMode(HttpContext httpContext)
 		{
+
+			if (httpContext == null) return false;
+			if (IsDevelopmentMode(httpContext)) return true;
 
 			return httpContext.Items["IsPreview"] != null && (bool)httpContext.Items["IsPreview"];
 		}

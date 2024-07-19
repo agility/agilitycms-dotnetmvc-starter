@@ -23,6 +23,8 @@
 	@Html.Raw($"<script>{Model.PageResponse.Scripts.Top}</script>")
 }
 
+
+
 @await Component.InvokeAsync("PreviewBar")
 <div class="flex flex-col min-h-screen">
 	@await Component.InvokeAsync("SiteHeader", Model.Locale)

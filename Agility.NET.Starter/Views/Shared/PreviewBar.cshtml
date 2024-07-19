@@ -1,27 +1,23 @@
 ﻿@using Agility.NET.FetchAPI.Util
-
-@functions {
-	private string IsPreview()
-	{
-		var isPreview = Context.Request.Cookies["isPreview"] ?? "false";
-
-		Context.Response.Headers.TryGetValue("Set-Cookie", out var cookie);
-		if (!cookie.ToString().Contains("isPreview=true;")) return isPreview;
-
-		isPreview = "true";
-		Context.Response.Redirect(Context.Request.Path);
-		return isPreview;
-	}
-}
+@using Microsoft.AspNetCore.Http
 
 @{
-	var isPreview = IsPreview();
+	var isPreview = Agility.NET.Starter.Util.Helpers.PreviewHelpers.IsPreviewMode(Context);
+	var IsDevelopmentMode = Agility.NET.Starter.Util.Helpers.PreviewHelpers.IsDevelopmentMode(Context);
 
-	var modes = new List<SelectListItem>()
+
+	@* var modes = new List<SelectListItem>()
 {
-new SelectListItem(Constants.Preview.ToUpper(), Constants.Preview, isPreview == "true"),
-new SelectListItem(Constants.Live.ToUpper(), Constants.Live, isPreview == "false")
+new SelectListItem(Constants.Preview.ToUpper(), Constants.Preview, isPreview),
+new SelectListItem(Constants.Live.ToUpper(), Constants.Live, isPreview)
 };
+
+if (IsDevelopmentMode)
+{
+//only allow preview mode on local dev
+modes.Add(new SelectListItem(Constants.Preview.ToUpper(), Constants.Preview, isPreview));
+}; *@
+
 
 
 	<div class="bg-agility relative px-8 text-gray-200">
@@ -29,41 +25,41 @@ new SelectListItem(Constants.Live.ToUpper(), Constants.Live, isPreview == "false
 			<div class="flex items-center">
 				<span class="p-2 rounded-lg mr-4">
 					<a href="https://www.agilitycms.com"
-					   target="_blank"
-					   title="Agility CMS">
+						target="_blank"
+						title="Agility CMS">
 						<img src="~/assets/agility-preview-logo.svg"
-							 alt="Agility CMS"
-							 height="20"
-							 width="80"
-							 class="h-5 w-20 hidden md:block" />
+							  alt="Agility CMS"
+							  height="20"
+							  width="80"
+							  class="h-5 w-20 hidden md:block" />
 					</a>
 				</span>
 				<div class="mr-4">
 					<a href="https://help.agilitycms.com/hc/en-us"
-					   target="_blank"
-					   title="Help Center">
+						target="_blank"
+						title="Help Center">
 						<div class="flex items-center">
 							<i class="fas fa-info-circle text-2xl mr-2"
-							   aria-hidden="true"></i>
+								aria-hidden="true"></i>
 							<p class="hidden md:block text-sm">Help Center</p>
 						</div>
 					</a>
 				</div>
 				<div>
 					<a href="https://github.com/agility/agilitycms-dotnet-starter"
-					   target="_blank"
-					   title="View on GitHub"
-					   class="text-2xl">
+						target="_blank"
+						title="View on GitHub"
+						class="text-2xl">
 						<div class="flex items-center">
 							<i class="fab fa-github mr-2"
-							   aria-hidden="true"></i>
+								aria-hidden="true"></i>
 							<p class="hidden md:block text-sm">View on GitHub</p>
 						</div>
 					</a>
 				</div>
 			</div>
 			<div class="relative flex items-center py-4 bg-agility">
-				@if (isPreview == "false")
+				@if (!isPreview)
 				{
 					<p class="hidden md:block text-sm px-2 text-gray-200">
 						Viewing <span class="font-bold">Published</span> Content
@@ -76,21 +72,24 @@ new SelectListItem(Constants.Live.ToUpper(), Constants.Live, isPreview == "false
 					</p>
 				}
 
-				<div id="menuButton"
-					 class="p-2 text-gray-200 rounded-lg z-20 cursor-pointer"
-					 onclick="showMenu()">
-					<i id="up"
-					   class="fa fa-chevron-up"
-					   style="display: none;"></i>
-					<i id="down"
-					   class="fa fa-chevron-down"></i>
+				@if (!IsDevelopmentMode)
+				{
+					<div id="menuButton"
+						  class="p-2 text-gray-200 rounded-lg z-20 cursor-pointer"
+						  onclick="showMenu()">
+						<i id="up"
+							class="fa fa-chevron-up"
+							style="display: none;"></i>
+						<i id="down"
+							class="fa fa-chevron-down"></i>
 
-				</div>
+					</div>
+				}
 				<div id="menu"
-					 style="display: none;"
-					 class="absolute bg-white text-white text-sm py-4 px-6 w-20.1 -right-0 -bottom-28 md:-bottom-16 z-10 rounded-b-lg shadow-xl md:max-w-full">
+					  style="display: none;"
+					  class="absolute bg-white text-white text-sm py-4 px-6 w-20.1 -right-0 -bottom-28 md:-bottom-16 z-10 rounded-b-lg shadow-xl md:max-w-full">
 
-					@if (isPreview == "true")
+					@if (isPreview)
 					{
 						<p class="mb-4 text-center text-agility z-20">
 							Previewing <span class="font-bold">Latest</span> Changes
@@ -103,8 +102,8 @@ new SelectListItem(Constants.Live.ToUpper(), Constants.Live, isPreview == "false
 						</p>
 					}
 					<button class="text-gray-200 bg-agility p-2 w-full rounded-md text-sm"
-							onclick="togglePreview('@isPreview')">
-						@(isPreview == "true" ? "View Live Mode" : "View Preview Mode")
+							  onclick="togglePreview('@isPreview')">
+						@(isPreview ? "View Live Mode" : "View Preview Mode")
 					</button>
 				</div>
 			</div>
